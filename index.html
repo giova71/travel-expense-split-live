@@ -128,9 +128,26 @@
           <div class="card-inner">
             <h2 class="section-title">Nuova spesa</h2>
             <form id="expenseForm">
-              <div class="field">
-                <label for="description">Oggetto o servizio</label>
-                <input id="description" type="text" placeholder="Es. cena, hotel, benzina" required />
+              <div class="field-grid">
+                <div class="field">
+                  <label for="description">Oggetto o servizio</label>
+                  <input id="description" list="expenseOptions" type="text" placeholder="Seleziona o scrivi una voce" required />
+                  <datalist id="expenseOptions">
+                    <option value="colazione"></option>
+                    <option value="pranzo"></option>
+                    <option value="merenda"></option>
+                    <option value="cena"></option>
+                    <option value="snacks"></option>
+                    <option value="gelato"></option>
+                    <option value="autostrada"></option>
+                    <option value="volo aereo"></option>
+                    <option value="rifornimento"></option>
+                  </datalist>
+                </div>
+                <div class="field">
+                  <label for="expenseDateTime">Data e ora</label>
+                  <input id="expenseDateTime" type="datetime-local" required />
+                </div>
               </div>
               <div class="field-grid">
                 <div class="field">
@@ -221,7 +238,7 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyBjecZ63L_TtmVoJ_m_-xhzXnYxW_nbfog",
@@ -243,7 +260,7 @@
 
     const el = {
       tripId: document.getElementById('tripId'), myName: document.getElementById('myName'), connectBtn: document.getElementById('connectBtn'), disconnectBtn: document.getElementById('disconnectBtn'),
-      connectionAlert: document.getElementById('connectionAlert'), form: document.getElementById('expenseForm'), description: document.getElementById('description'), amount: document.getElementById('amount'),
+      connectionAlert: document.getElementById('connectionAlert'), form: document.getElementById('expenseForm'), description: document.getElementById('description'), expenseDateTime: document.getElementById('expenseDateTime'), amount: document.getElementById('amount'),
       paidBy: document.getElementById('paidBy'), shareGiovanni: document.getElementById('shareGiovanni'), shareViviana: document.getElementById('shareViviana'), customSplitFields: document.getElementById('customSplitFields'),
       totalAmount: document.getElementById('totalAmount'), expenseCount: document.getElementById('expenseCount'), averageShare: document.getElementById('averageShare'), paidGiovanni: document.getElementById('paidGiovanni'),
       paidViviana: document.getElementById('paidViviana'), owedGiovanni: document.getElementById('owedGiovanni'), owedViviana: document.getElementById('owedViviana'), settlementBox: document.getElementById('settlementBox'),
@@ -254,6 +271,17 @@
     const formatCurrency = value => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value || 0);
     const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
     const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    const formatExpenseDateTime = value => {
+      if (!value) return 'Data non disponibile';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return escapeHtml(value);
+      return new Intl.DateTimeFormat('it-IT', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+    };
+    const defaultDateTimeValue = () => {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      return now.toISOString().slice(0, 16);
+    };
 
     function showAlert(node, message, type = 'info') {
       node.textContent = message;
@@ -322,7 +350,7 @@
       else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale: Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`);
       else lines.push(`Saldo finale: Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`);
       lines.push('', 'Dettaglio spese:');
-      expenses.slice().reverse().forEach((item, index) => lines.push(`${index + 1}. ${item.description} — ${formatCurrency(item.amount)} — pagato da ${item.paidBy} — quota G ${item.shares.Giovanni}% / V ${item.shares.Viviana}%`));
+      expenses.slice().reverse().forEach((item, index) => lines.push(`${index + 1}. ${item.description} — ${formatCurrency(item.amount)} — ${formatExpenseDateTime(item.expenseDateTime)} — pagato da ${item.paidBy} — quota G ${item.shares.Giovanni}% / V ${item.shares.Viviana}%`));
       return lines.join('\n');
     }
 
@@ -346,6 +374,7 @@
               <strong>${escapeHtml(item.description)}</strong>
               <div class="expense-meta">
                 <span class="tag">${formatCurrency(item.amount)}</span>
+                <span class="tag">${formatExpenseDateTime(item.expenseDateTime)}</span>
                 <span class="tag">Pagato da ${escapeHtml(item.paidBy)}</span>
                 <span class="tag">G ${item.shares.Giovanni}%</span>
                 <span class="tag">V ${item.shares.Viviana}%</span>
@@ -385,7 +414,7 @@
         if (unsubscribe) unsubscribe();
         currentTripId = tripId;
         const expensesRef = collection(db, 'trips', tripId, 'expenses');
-        unsubscribe = onSnapshot(query(expensesRef, orderBy('createdAt', 'desc')), snapshot => {
+        unsubscribe = onSnapshot(query(expensesRef, orderBy('expenseDateTime', 'desc')), snapshot => {
           expenses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
           render();
           showAlert(el.connectionAlert, `Connesso al viaggio condiviso: ${tripId}`, 'ok');
@@ -412,17 +441,20 @@
         if (!currentTripId || !db) throw new Error('Connettiti prima a un viaggio condiviso.');
         const description = el.description.value.trim();
         const amount = Number(el.amount.value);
+        const expenseDateTime = el.expenseDateTime.value;
         if (!description) throw new Error('Inserisci un oggetto o servizio.');
+        if (!expenseDateTime) throw new Error('Inserisci data e ora della spesa.');
         if (!(amount > 0)) throw new Error('Inserisci un costo valido.');
         await addDoc(collection(db, 'trips', currentTripId, 'expenses'), {
           description,
           amount: round(amount),
+          expenseDateTime,
           paidBy: el.paidBy.value,
           shares: currentShares(),
-          createdBy: el.myName.value,
-          createdAt: serverTimestamp()
+          createdBy: el.myName.value
         });
         el.form.reset();
+        el.expenseDateTime.value = defaultDateTimeValue();
         el.paidBy.value = el.myName.value;
         splitMode = 'equal';
         document.querySelectorAll('[data-split]').forEach(btn => btn.classList.toggle('active', btn.dataset.split === 'equal'));
@@ -456,6 +488,7 @@
     el.stickyFocus.addEventListener('click', () => el.description.focus());
 
     el.paidBy.value = el.myName.value;
+    el.expenseDateTime.value = defaultDateTimeValue();
     render();
   </script>
 </body>
