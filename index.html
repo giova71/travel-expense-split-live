@@ -38,15 +38,13 @@
     .brand h1 { margin:0; font-size: var(--text-xl); line-height:1.05; }
     .brand p, .helper, .muted { color: var(--color-text-muted); }
     .theme-toggle, .mini-btn, .icon-btn { min-width:44px; min-height:44px; border-radius: var(--radius-full); border:1px solid var(--color-border); background: var(--color-surface); }
-    .hero, .layout, .stats, .summary-grid, .field-grid { display:grid; gap: var(--space-4); }
-    .hero { grid-template-columns: 1.1fr .9fr; margin-bottom: var(--space-4); }
+    .layout, .stats, .summary-grid, .field-grid { display:grid; gap: var(--space-4); }
     .layout { grid-template-columns: 1fr 1fr; }
     .stats { grid-template-columns: repeat(3, minmax(0,1fr)); }
     .summary-grid, .field-grid { grid-template-columns: 1fr 1fr; }
     .card { background: var(--color-surface); border:1px solid rgba(122,121,116,.18); border-radius: var(--radius-xl); box-shadow: var(--shadow-sm); }
     .card-inner { padding: var(--space-5); }
     .section-title { margin:0 0 var(--space-4); font-size: var(--text-lg); }
-    .eyebrow { display:inline-flex; align-items:center; gap: var(--space-2); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); background: var(--color-primary-highlight); color: var(--color-primary); font-size: var(--text-xs); font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
     .pill, .stat, .summary-box, .info-box { padding: var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface-2); }
     .pill small, .stat small, .summary-box small { display:block; color: var(--color-text-muted); font-size: var(--text-xs); text-transform: uppercase; letter-spacing:.04em; }
     .pill strong, .stat strong, .summary-box strong { display:block; margin-top: var(--space-1); font-size: var(--text-lg); }
@@ -73,9 +71,8 @@
     .empty { padding: var(--space-8) var(--space-4); text-align:center; color: var(--color-text-muted); border:1px dashed var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-2); }
     .settlement { margin-top: var(--space-4); padding: var(--space-4); border-radius: var(--radius-lg); font-weight:700; }
     .sticky-bar { position: sticky; bottom:0; z-index:10; margin-top: var(--space-4); padding: var(--space-3); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--color-surface) 88%, transparent); border:1px solid var(--color-border); backdrop-filter: blur(10px); display:none; }
-    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }
     @media (max-width: 900px) {
-      .hero, .layout, .stats, .summary-grid, .field-grid { grid-template-columns: 1fr; }
+      .layout, .stats, .summary-grid, .field-grid { grid-template-columns: 1fr; }
       .topbar { align-items:flex-start; }
       .sticky-bar { display:block; }
     }
@@ -102,31 +99,6 @@
     </header>
 
     <main>
-      <section class="hero">
-        <article class="card">
-          <div class="card-inner">
-            <span class="eyebrow">Versione condivisa</span>
-            <p>Questa versione usa Firebase Firestore come backend realtime. Tu e la tua compagna aprite lo stesso link, impostate lo stesso ID viaggio e vedete le spese aggiornarsi quasi in tempo reale.</p>
-            <div class="stats" style="margin-top: var(--space-4);">
-              <div class="stat"><small>Sync</small><strong>Realtime</strong></div>
-              <div class="stat"><small>Accesso</small><strong>Link unico</strong></div>
-              <div class="stat"><small>Split</small><strong>50 / 50</strong></div>
-            </div>
-          </div>
-        </article>
-        <article class="card">
-          <div class="card-inner">
-            <h2 class="section-title">Setup rapido</h2>
-            <div class="list" style="gap: var(--space-2);">
-              <div class="info-box">1. Crea un progetto Firebase e abilita Firestore.</div>
-              <div class="info-box">2. Inserisci la config nel blocco <code>firebaseConfig</code>.</div>
-              <div class="info-box">3. Pubblica il file su GitHub Pages, Netlify o Azure Static Web Apps.</div>
-              <div class="info-box">4. Condividi il link e usate lo stesso ID viaggio.</div>
-            </div>
-          </div>
-        </article>
-      </section>
-
       <section class="layout">
         <article class="card">
           <div class="card-inner">
@@ -140,7 +112,7 @@
                 <label for="myName">Sto usando l'app come</label>
                 <select id="myName">
                   <option value="Giovanni">Giovanni</option>
-                  <option value="Compagna">Compagna</option>
+                  <option value="Viviana">Viviana</option>
                 </select>
               </div>
             </div>
@@ -148,7 +120,7 @@
               <button id="connectBtn" class="btn btn-primary" type="button">Connetti viaggio</button>
               <button id="disconnectBtn" class="btn btn-secondary" type="button">Disconnetti</button>
             </div>
-            <div id="connectionAlert" class="alert show warning">Inserisci la tua config Firebase prima di pubblicare l'app.</div>
+            <div id="connectionAlert" class="alert show warning">Inserisci un ID viaggio e premi Connetti.</div>
           </div>
         </article>
 
@@ -169,7 +141,7 @@
                   <label for="paidBy">Pagato da</label>
                   <select id="paidBy">
                     <option value="Giovanni">Giovanni</option>
-                    <option value="Compagna">Compagna</option>
+                    <option value="Viviana">Viviana</option>
                   </select>
                 </div>
               </div>
@@ -186,8 +158,8 @@
                   <input id="shareGiovanni" type="number" min="0" max="100" step="1" value="50" />
                 </div>
                 <div class="field">
-                  <label for="shareCompagna">Quota Compagna %</label>
-                  <input id="shareCompagna" type="number" min="0" max="100" step="1" value="50" />
+                  <label for="shareViviana">Quota Viviana %</label>
+                  <input id="shareViviana" type="number" min="0" max="100" step="1" value="50" />
                 </div>
               </div>
               <div class="actions">
@@ -216,9 +188,9 @@
                 <div class="expense-meta"><span class="tag">Dovuto <span id="owedGiovanni">€0,00</span></span></div>
               </div>
               <div class="summary-box">
-                <small>Compagna ha pagato</small>
-                <strong id="paidCompagna">€0,00</strong>
-                <div class="expense-meta"><span class="tag">Dovuto <span id="owedCompagna">€0,00</span></span></div>
+                <small>Viviana ha pagato</small>
+                <strong id="paidViviana">€0,00</strong>
+                <div class="expense-meta"><span class="tag">Dovuto <span id="owedViviana">€0,00</span></span></div>
               </div>
             </div>
             <div id="settlementBox" class="settlement ok">Siete in pari.</div>
@@ -237,23 +209,6 @@
           </div>
         </article>
       </section>
-
-      <section class="card" style="margin-top: var(--space-4);">
-        <div class="card-inner">
-          <h2 class="section-title">Config Firebase da compilare</h2>
-          <p class="helper">Sostituisci i valori di esempio nel JavaScript in fondo al file. Poi abilita regole Firestore limitate al solo path <code>trips/{tripId}/expenses</code>.</p>
-          <textarea readonly>
-const firebaseConfig = {
-  apiKey: "AIzaSyBjecZ63L_TtmVoJ_m_-xhzXnYxW_nbfog",
-  authDomain: "travel-expense-split-live.firebaseapp.com",
-  projectId: "travel-expense-split-live",
-  storageBucket: "travel-expense-split-live.firebasestorage.app",
-  messagingSenderId: "581842102008",
-  appId: "1:581842102008:web:87d08815380ce470b67d0d",
-  measurementId: "G-R0JGH01HT3"
-};</textarea>
-        </div>
-      </section>
     </main>
 
     <div class="sticky-bar">
@@ -268,18 +223,17 @@ const firebaseConfig = {
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
     import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
-	const usingPlaceholderConfig = false;
-	
     const firebaseConfig = {
-	  apiKey: "AIzaSyBjecZ63L_TtmVoJ_m_-xhzXnYxW_nbfog",
-	  authDomain: "travel-expense-split-live.firebaseapp.com",
-	  projectId: "travel-expense-split-live",
-	  storageBucket: "travel-expense-split-live.firebasestorage.app",
-	  messagingSenderId: "581842102008",
-	  appId: "1:581842102008:web:87d08815380ce470b67d0d",
-	  measurementId: "G-R0JGH01HT3"
-	}
+      apiKey: "AIzaSyBjecZ63L_TtmVoJ_m_-xhzXnYxW_nbfog",
+      authDomain: "travel-expense-split-live.firebaseapp.com",
+      projectId: "travel-expense-split-live",
+      storageBucket: "travel-expense-split-live.firebasestorage.app",
+      messagingSenderId: "581842102008",
+      appId: "1:581842102008:web:87d08815380ce470b67d0d",
+      measurementId: "G-R0JGH01HT3"
+    };
 
+    const usingPlaceholderConfig = Object.values(firebaseConfig).some(v => String(v).includes('REPLACE_ME'));
     let app = null;
     let db = null;
     let unsubscribe = null;
@@ -290,9 +244,9 @@ const firebaseConfig = {
     const el = {
       tripId: document.getElementById('tripId'), myName: document.getElementById('myName'), connectBtn: document.getElementById('connectBtn'), disconnectBtn: document.getElementById('disconnectBtn'),
       connectionAlert: document.getElementById('connectionAlert'), form: document.getElementById('expenseForm'), description: document.getElementById('description'), amount: document.getElementById('amount'),
-      paidBy: document.getElementById('paidBy'), shareGiovanni: document.getElementById('shareGiovanni'), shareCompagna: document.getElementById('shareCompagna'), customSplitFields: document.getElementById('customSplitFields'),
+      paidBy: document.getElementById('paidBy'), shareGiovanni: document.getElementById('shareGiovanni'), shareViviana: document.getElementById('shareViviana'), customSplitFields: document.getElementById('customSplitFields'),
       totalAmount: document.getElementById('totalAmount'), expenseCount: document.getElementById('expenseCount'), averageShare: document.getElementById('averageShare'), paidGiovanni: document.getElementById('paidGiovanni'),
-      paidCompagna: document.getElementById('paidCompagna'), owedGiovanni: document.getElementById('owedGiovanni'), owedCompagna: document.getElementById('owedCompagna'), settlementBox: document.getElementById('settlementBox'),
+      paidViviana: document.getElementById('paidViviana'), owedGiovanni: document.getElementById('owedGiovanni'), owedViviana: document.getElementById('owedViviana'), settlementBox: document.getElementById('settlementBox'),
       reportText: document.getElementById('reportText'), expenseList: document.getElementById('expenseList'), formAlert: document.getElementById('formAlert'), copyReport: document.getElementById('copyReport'),
       stickyCopy: document.getElementById('stickyCopy'), stickyFocus: document.getElementById('stickyFocus'), themeToggle: document.querySelector('[data-theme-toggle]')
     };
@@ -304,11 +258,6 @@ const firebaseConfig = {
     function showAlert(node, message, type = 'info') {
       node.textContent = message;
       node.className = `alert show ${type}`;
-    }
-
-    function clearAlert(node) {
-      node.className = 'alert';
-      node.textContent = '';
     }
 
     function setThemeIcon(theme) {
@@ -337,23 +286,23 @@ const firebaseConfig = {
     function currentShares() {
       if (splitMode === 'equal') return { Giovanni: 50, Viviana: 50 };
       const g = Number(el.shareGiovanni.value || 0);
-      const c = Number(el.shareCompagna.value || 0);
-      if (g + c !== 100) throw new Error('Le percentuali devono sommare 100.');
-      return { Giovanni: g, Compagna: c };
+      const v = Number(el.shareViviana.value || 0);
+      if (g + v !== 100) throw new Error('Le percentuali devono sommare 100.');
+      return { Giovanni: g, Viviana: v };
     }
 
     function compute() {
-      const totalsPaid = { Giovanni: 0, Compagna: 0 };
-      const totalsOwed = { Giovanni: 0, Compagna: 0 };
+      const totalsPaid = { Giovanni: 0, Viviana: 0 };
+      const totalsOwed = { Giovanni: 0, Viviana: 0 };
       let total = 0;
       expenses.forEach(item => {
         total += Number(item.amount || 0);
         totalsPaid[item.paidBy] += Number(item.amount || 0);
         totalsOwed.Giovanni += item.amount * (item.shares.Giovanni / 100);
-        totalsOwed.Compagna += item.amount * (item.shares.Compagna / 100);
+        totalsOwed.Viviana += item.amount * (item.shares.Viviana / 100);
       });
       return {
-        total: round(total), totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Compagna: round(totalsPaid.Compagna) }, totalsOwed: { Giovanni: round(totalsOwed.Giovanni), Compagna: round(totalsOwed.Compagna) }, balanceGiovanni: round(totalsPaid.Giovanni - totalsOwed.Giovanni)
+        total: round(total), totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Viviana: round(totalsPaid.Viviana) }, totalsOwed: { Giovanni: round(totalsOwed.Giovanni), Viviana: round(totalsOwed.Viviana) }, balanceGiovanni: round(totalsPaid.Giovanni - totalsOwed.Giovanni)
       };
     }
 
@@ -364,16 +313,16 @@ const firebaseConfig = {
         `Totale: ${formatCurrency(summary.total)}`,
         `Numero spese: ${expenses.length}`,
         `Giovanni ha pagato: ${formatCurrency(summary.totalsPaid.Giovanni)}`,
-        `Compagna ha pagato: ${formatCurrency(summary.totalsPaid.Compagna)}`,
+        `Viviana ha pagato: ${formatCurrency(summary.totalsPaid.Viviana)}`,
         `Quota dovuta Giovanni: ${formatCurrency(summary.totalsOwed.Giovanni)}`,
-        `Quota dovuta Compagna: ${formatCurrency(summary.totalsOwed.Compagna)}`,
+        `Quota dovuta Viviana: ${formatCurrency(summary.totalsOwed.Viviana)}`,
         ''
       ];
       if (Math.abs(summary.balanceGiovanni) < 0.01) lines.push('Saldo finale: siete in pari.');
-      else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale: Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} alla compagna.`);
-      else lines.push(`Saldo finale: la compagna deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`);
+      else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale: Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`);
+      else lines.push(`Saldo finale: Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`);
       lines.push('', 'Dettaglio spese:');
-      expenses.slice().reverse().forEach((item, index) => lines.push(`${index + 1}. ${item.description} — ${formatCurrency(item.amount)} — pagato da ${item.paidBy} — quota G ${item.shares.Giovanni}% / C ${item.shares.Compagna}%`));
+      expenses.slice().reverse().forEach((item, index) => lines.push(`${index + 1}. ${item.description} — ${formatCurrency(item.amount)} — pagato da ${item.paidBy} — quota G ${item.shares.Giovanni}% / V ${item.shares.Viviana}%`));
       return lines.join('\n');
     }
 
@@ -383,9 +332,9 @@ const firebaseConfig = {
       el.expenseCount.textContent = expenses.length;
       el.averageShare.textContent = formatCurrency(expenses.length ? summary.total / 2 : 0);
       el.paidGiovanni.textContent = formatCurrency(summary.totalsPaid.Giovanni);
-      el.paidCompagna.textContent = formatCurrency(summary.totalsPaid.Compagna);
+      el.paidViviana.textContent = formatCurrency(summary.totalsPaid.Viviana);
       el.owedGiovanni.textContent = formatCurrency(summary.totalsOwed.Giovanni);
-      el.owedCompagna.textContent = formatCurrency(summary.totalsOwed.Compagna);
+      el.owedViviana.textContent = formatCurrency(summary.totalsOwed.Viviana);
       el.reportText.value = buildReport(summary);
 
       if (!expenses.length) {
@@ -399,7 +348,7 @@ const firebaseConfig = {
                 <span class="tag">${formatCurrency(item.amount)}</span>
                 <span class="tag">Pagato da ${escapeHtml(item.paidBy)}</span>
                 <span class="tag">G ${item.shares.Giovanni}%</span>
-                <span class="tag">C ${item.shares.Compagna}%</span>
+                <span class="tag">V ${item.shares.Viviana}%</span>
               </div>
             </div>
             <button class="icon-btn" aria-label="Elimina spesa" onclick="window.deleteExpense('${item.id}')">
@@ -413,10 +362,10 @@ const firebaseConfig = {
         el.settlementBox.textContent = 'Siete in pari.';
       } else if (summary.balanceGiovanni < 0) {
         el.settlementBox.className = 'settlement warning';
-        el.settlementBox.textContent = `Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} alla compagna.`;
+        el.settlementBox.textContent = `Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`;
       } else {
         el.settlementBox.className = 'settlement info';
-        el.settlementBox.textContent = `La compagna deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`;
+        el.settlementBox.textContent = `Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`;
       }
     }
 
@@ -430,7 +379,7 @@ const firebaseConfig = {
 
     el.connectBtn.addEventListener('click', () => {
       try {
-        if (usingPlaceholderConfig || !db) throw new Error('Compila prima la config Firebase nel file HTML.');
+        if (usingPlaceholderConfig || !db) throw new Error('Config Firebase non valida o non caricata.');
         const tripId = el.tripId.value.trim().toLowerCase();
         if (!tripId) throw new Error('Inserisci un ID viaggio.');
         if (unsubscribe) unsubscribe();
@@ -479,7 +428,7 @@ const firebaseConfig = {
         document.querySelectorAll('[data-split]').forEach(btn => btn.classList.toggle('active', btn.dataset.split === 'equal'));
         el.customSplitFields.style.display = 'none';
         el.shareGiovanni.value = 50;
-        el.shareCompagna.value = 50;
+        el.shareViviana.value = 50;
         showAlert(el.formAlert, 'Spesa aggiunta e sincronizzata.', 'ok');
       } catch (error) {
         showAlert(el.formAlert, error.message, 'error');
