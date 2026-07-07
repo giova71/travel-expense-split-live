@@ -335,7 +335,7 @@ const firebaseConfig = {
     }
 
     function currentShares() {
-      if (splitMode === 'equal') return { Giovanni: 50, Compagna: 50 };
+      if (splitMode === 'equal') return { Giovanni: 50, Viviana: 50 };
       const g = Number(el.shareGiovanni.value || 0);
       const c = Number(el.shareCompagna.value || 0);
       if (g + c !== 100) throw new Error('Le percentuali devono sommare 100.');
