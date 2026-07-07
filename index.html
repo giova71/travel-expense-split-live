@@ -87,8 +87,8 @@
           <path d="M18 33h10l4-10 5 18 4-8h5" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
         <div>
-          <h1>Spese vacanza live</h1>
-          <p class="muted">Una mini web app condivisa, pensata per funzionare da link unico su due telefoni.</p>
+          <h1>Track Spese live</h1>
+          <p class="muted">Una mini web app condivisa, pensata per gestire le spese quotidiane.</p>
         </div>
       </div>
       <div class="toolbar">
@@ -105,8 +105,8 @@
             <h2 class="section-title">Connessione</h2>
             <div class="field-grid">
               <div class="field">
-                <label for="tripId">ID viaggio condiviso</label>
-                <input id="tripId" type="text" placeholder="es. sardegna-2026" />
+                <label for="tripId">ID Spese condivise</label>
+                <input id="tripId" type="text" placeholder="es. sardegna-2026 o marzo-2026" />
               </div>
               <div class="field">
                 <label for="myName">Sto usando l'app come</label>
@@ -238,7 +238,7 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyBjecZ63L_TtmVoJ_m_-xhzXnYxW_nbfog",
@@ -414,7 +414,7 @@
         if (unsubscribe) unsubscribe();
         currentTripId = tripId;
         const expensesRef = collection(db, 'trips', tripId, 'expenses');
-        unsubscribe = onSnapshot(query(expensesRef, orderBy('createdAt', 'desc')), snapshot => {
+        unsubscribe = onSnapshot(query(expensesRef, orderBy('expenseDateTime', 'desc')), snapshot => {
           expenses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
           render();
           showAlert(el.connectionAlert, `Connesso al viaggio condiviso: ${tripId}`, 'ok');
@@ -449,7 +449,6 @@
           description,
           amount: round(amount),
           expenseDateTime,
-          createdAt: serverTimestamp(),
           paidBy: el.paidBy.value,
           shares: currentShares(),
           createdBy: el.myName.value
