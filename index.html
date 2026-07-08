@@ -116,10 +116,10 @@
               </div>
             </div>
             <div class="actions">
-              <button id="connectBtn" class="btn btn-primary" type="button">Carica viaggio</button>
+              <button id="connectBtn" class="btn btn-primary" type="button">Carica Spese</button>
               <button id="disconnectBtn" class="btn btn-secondary" type="button">Svuota vista</button>
             </div>
-            <div id="connectionAlert" class="alert show warning">Inserisci un ID viaggio e premi Carica viaggio.</div>
+            <div id="connectionAlert" class="alert show warning">Inserisci un ID viaggio e premi Carica Spese.</div>
           </div>
         </article>
 
@@ -378,7 +378,7 @@
         render();
         showAlert(el.connectionAlert, `Caricato viaggio condiviso: ${tripId}`, 'ok');
       } catch (error) {
-        showAlert(el.connectionAlert, isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message, 'error');
+        showAlert(el.connectionAlert, `Errore: ${isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message} | URL: ${APP_SCRIPT_URL}`, 'error');
       }
     });
 
@@ -386,7 +386,7 @@
       currentTripId = '';
       expenses = [];
       render();
-      showAlert(el.connectionAlert, 'Vista svuotata. Nessun dato locale conservato qui.', 'warning');
+      showAlert(el.connectionAlert, `Vista svuotata. Nessun dato locale conservato qui. | URL: ${APP_SCRIPT_URL}`, 'warning');
     });
 
     el.form.addEventListener('submit', async event => {
@@ -412,9 +412,9 @@
         el.shareGiovanni.value = 50;
         el.shareViviana.value = 50;
         render();
-        showAlert(el.formAlert, 'Spesa salvata su Google Sheets.', 'ok');
+        showAlert(el.formAlert, `Spesa salvata su Google Sheets. | URL: ${APP_SCRIPT_URL}`, 'ok');
       } catch (error) {
-        showAlert(el.formAlert, isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message, 'error');
+        showAlert(el.formAlert, `Errore: ${isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message} | URL: ${APP_SCRIPT_URL}`, 'error');
       }
     });
 
@@ -425,9 +425,9 @@
         if (!res.ok) throw new Error(res.error || 'Errore eliminazione.');
         expenses = res.expenses || [];
         render();
-        showAlert(el.formAlert, 'Spesa eliminata.', 'ok');
+        showAlert(el.formAlert, `Spesa eliminata. | URL: ${APP_SCRIPT_URL}`, 'ok');
       } catch (error) {
-        showAlert(el.formAlert, isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message, 'error');
+        showAlert(el.formAlert, `Errore: ${isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message} | URL: ${APP_SCRIPT_URL}`, 'error');
       }
     };
 
