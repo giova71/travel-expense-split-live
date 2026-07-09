@@ -126,44 +126,389 @@
           <div class="card-inner">
             <h2 class="section-title">Nuova spesa</h2>
             <form id="expenseForm">
-              <!-- stesso markup precedente -->
+              <div class="field-grid">
+                <div class="field">
+                  <label for="description">Oggetto o servizio</label>
+                  <input id="description" list="expenseOptions" type="text" placeholder="Seleziona o scrivi una voce" required />
+                  <datalist id="expenseOptions">
+                    <option value="colazione"></option>
+                    <option value="pranzo"></option>
+                    <option value="merenda"></option>
+                    <option value="cena"></option>
+                    <option value="snacks"></option>
+                    <option value="gelato"></option>
+                    <option value="autostrada"></option>
+                    <option value="volo aereo"></option>
+                    <option value="rifornimento"></option>
+                  </datalist>
+                </div>
+                <div class="field">
+                  <label for="expenseDateTime">Data e ora</label>
+                  <input id="expenseDateTime" type="datetime-local" required />
+                </div>
+              </div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="amount">Costo</label>
+                  <input id="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
+                </div>
+                <div class="field">
+                  <label for="paidBy">Pagato da</label>
+                  <select id="paidBy">
+                    <option value="Giovanni">Giovanni</option>
+                    <option value="Viviana">Viviana</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label>Divisione</label>
+                <div class="split-toggle">
+                  <button type="button" class="chip active" data-split="equal">50 / 50</button>
+                  <button type="button" class="chip" data-split="custom">Personalizzata</button>
+                </div>
+              </div>
+              <div id="customSplitFields" class="field-grid" style="display:none;">
+                <div class="field">
+                  <label for="shareGiovanni">Quota Giovanni %</label>
+                  <input id="shareGiovanni" type="number" min="0" max="100" step="1" value="50" />
+                </div>
+                <div class="field">
+                  <label for="shareViviana">Quota Viviana %</label>
+                  <input id="shareViviana" type="number" min="0" max="100" step="1" value="50" />
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn btn-primary" type="submit">Aggiungi spesa</button>
+                <button class="btn btn-secondary" type="button" id="copyReport">Copia report</button>
+              </div>
+              <div id="formAlert" class="alert"></div>
             </form>
           </div>
         </article>
       </section>
+
+      <section class="layout" style="margin-top: var(--space-4);">
+        <article class="card">
+          <div class="card-inner">
+            <h2 class="section-title">Report</h2>
+            <div class="stats">
+              <div class="stat"><small>Totale spese</small><strong id="totalAmount">€0,00</strong></div>
+              <div class="stat"><small>Spese registrate</small><strong id="expenseCount">0</strong></div>
+              <div class="stat"><small>Quota media</small><strong id="averageShare">€0,00</strong></div>
+            </div>
+            <div class="summary-grid">
+              <div class="summary-box">
+                <small>Giovanni ha pagato</small>
+                <strong id="paidGiovanni">€0,00</strong>
+                <div class="expense-meta"><span class="tag">Dovuto <span id="owedGiovanni">€0,00</span></span></div>
+              </div>
+              <div class="summary-box">
+                <small>Viviana ha pagato</small>
+                <strong id="paidViviana">€0,00</strong>
+                <div class="expense-meta"><span class="tag">Dovuto <span id="owedViviana">€0,00</span></span></div>
+              </div>
+            </div>
+            <div id="settlementBox" class="settlement ok">Siete in pari.</div>
+            <div class="field" style="margin-top: var(--space-4); margin-bottom:0;">
+              <label for="reportText">Testo da copiare</label>
+              <textarea id="reportText" readonly></textarea>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-inner">
+            <h2 class="section-title">Lista spese</h2>
+            <div id="expenseList" class="list"></div>
+            <p class="helper" style="margin-top: var(--space-4);">I dati vengono letti e scritti su Google Sheets tramite Apps Script. La condivisione tra telefoni è immediata quando ricarichi il viaggio.</p>
+          </div>
+        </article>
+      </section>
     </main>
-
-    <script>
-      const DEPLOY_VERSION = '<?= deployVersion ?>';
-      const INITIAL_TRIP_ID = '<?= initialTripId ?>';
-      document.getElementById('deployVersionLabel').textContent = DEPLOY_VERSION;
-
-      function googleRun(fn, ...args) {
-        return new Promise((resolve, reject) => {
-          google.script.run
-            .withSuccessHandler(resolve)
-            .withFailureHandler(reject)[fn](...args);
-        });
-      }
-
-      async function loadTrip(tripId) {
-        const res = await googleRun('listExpenses', tripId);
-        return res;
-      }
-
-      document.getElementById('healthBtn').addEventListener('click', async () => {
-        const res = await googleRun('getAppState');
-        alert(JSON.stringify(res, null, 2));
-      });
-
-      // qui puoi incollare la stessa logica UI già pronta,
-      // sostituendo api('list'/'add'/'delete') con googleRun('listExpenses'/'addExpense'/'deleteExpense')
-      // e aggiornando render(), currentShares(), buildReport() come prima.
-
-      if (INITIAL_TRIP_ID) {
-        document.getElementById('tripId').value = INITIAL_TRIP_ID;
-      }
-    </script>
   </div>
+
+  <script>
+    const DEPLOY_VERSION = '<?= deployVersion ?>';
+    const INITIAL_TRIP_ID = '<?= initialTripId ?>';
+    document.getElementById('deployVersionLabel').textContent = DEPLOY_VERSION;
+
+    let currentTripId = '';
+    let splitMode = 'equal';
+    let expenses = [];
+
+    const el = {
+      tripId: document.getElementById('tripId'),
+      myName: document.getElementById('myName'),
+      connectBtn: document.getElementById('connectBtn'),
+      healthBtn: document.getElementById('healthBtn'),
+      disconnectBtn: document.getElementById('disconnectBtn'),
+      connectionAlert: document.getElementById('connectionAlert'),
+      form: document.getElementById('expenseForm'),
+      description: document.getElementById('description'),
+      expenseDateTime: document.getElementById('expenseDateTime'),
+      amount: document.getElementById('amount'),
+      paidBy: document.getElementById('paidBy'),
+      shareGiovanni: document.getElementById('shareGiovanni'),
+      shareViviana: document.getElementById('shareViviana'),
+      customSplitFields: document.getElementById('customSplitFields'),
+      totalAmount: document.getElementById('totalAmount'),
+      expenseCount: document.getElementById('expenseCount'),
+      averageShare: document.getElementById('averageShare'),
+      paidGiovanni: document.getElementById('paidGiovanni'),
+      paidViviana: document.getElementById('paidViviana'),
+      owedGiovanni: document.getElementById('owedGiovanni'),
+      owedViviana: document.getElementById('owedViviana'),
+      settlementBox: document.getElementById('settlementBox'),
+      reportText: document.getElementById('reportText'),
+      expenseList: document.getElementById('expenseList'),
+      formAlert: document.getElementById('formAlert'),
+      copyReport: document.getElementById('copyReport'),
+      themeToggle: document.querySelector('[data-theme-toggle]')
+    };
+
+    const formatCurrency = value => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value || 0);
+    const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
+    const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    const formatExpenseDateTime = value => {
+      if (!value) return 'Data non disponibile';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return escapeHtml(value);
+      return new Intl.DateTimeFormat('it-IT', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+    };
+    const defaultDateTimeValue = () => {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      return now.toISOString().slice(0, 16);
+    };
+
+    function showAlert(node, message, type = 'info') {
+      node.textContent = message;
+      node.className = `alert show ${type}`;
+    }
+
+    function setThemeIcon(theme) {
+      el.themeToggle.innerHTML = theme === 'dark'
+        ? '☀️'
+        : '🌓';
+    }
+
+    (function initTheme() {
+      const theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      setThemeIcon(theme);
+      el.themeToggle.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        setThemeIcon(next);
+      });
+    })();
+
+    function googleRun(fn, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(err => reject(new Error(err && err.message ? err.message : String(err))))
+          [fn](...args);
+      });
+    }
+
+    async function getAppState() {
+      return googleRun('getAppState');
+    }
+
+    async function reloadTrip(tripId) {
+      const res = await googleRun('listExpenses', tripId);
+      expenses = res.expenses || [];
+      currentTripId = tripId;
+      render();
+      showAlert(el.connectionAlert, `Caricato viaggio condiviso: ${tripId}`, 'ok');
+    }
+
+    function currentShares() {
+      if (splitMode === 'equal') return { Giovanni: 50, Viviana: 50 };
+      const g = Number(el.shareGiovanni.value || 0);
+      const v = Number(el.shareViviana.value || 0);
+      if (g + v !== 100) throw new Error('Le percentuali devono sommare 100.');
+      return { Giovanni: g, Viviana: v };
+    }
+
+    function compute() {
+      const totalsPaid = { Giovanni: 0, Viviana: 0 };
+      const totalsOwed = { Giovanni: 0, Viviana: 0 };
+      let total = 0;
+      expenses.forEach(item => {
+        total += Number(item.amount || 0);
+        totalsPaid[item.paidBy] += Number(item.amount || 0);
+        totalsOwed.Giovanni += item.amount * (item.shares.Giovanni / 100);
+        totalsOwed.Viviana += item.amount * (item.shares.Viviana / 100);
+      });
+      return {
+        total: round(total),
+        totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Viviana: round(totalsPaid.Viviana) },
+        totalsOwed: { Giovanni: round(totalsOwed.Giovanni), Viviana: round(totalsOwed.Viviana) },
+        balanceGiovanni: round(totalsPaid.Giovanni - totalsOwed.Giovanni)
+      };
+    }
+
+    function buildReport(summary) {
+      const lines = [
+        `Report spese viaggio: ${currentTripId || '-'}`,
+        '----------------------',
+        `Totale: ${formatCurrency(summary.total)}`,
+        `Numero spese: ${expenses.length}`,
+        `Giovanni ha pagato: ${formatCurrency(summary.totalsPaid.Giovanni)}`,
+        `Viviana ha pagato: ${formatCurrency(summary.totalsPaid.Viviana)}`,
+        `Quota dovuta Giovanni: ${formatCurrency(summary.totalsOwed.Giovanni)}`,
+        `Quota dovuta Viviana: ${formatCurrency(summary.totalsOwed.Viviana)}`,
+        ''
+      ];
+      if (Math.abs(summary.balanceGiovanni) < 0.01) lines.push('Saldo finale: siete in pari.');
+      else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale: Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`);
+      else lines.push(`Saldo finale: Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`);
+      return lines.join('\n');
+    }
+
+    function render() {
+      const summary = compute();
+      el.totalAmount.textContent = formatCurrency(summary.total);
+      el.expenseCount.textContent = expenses.length;
+      el.averageShare.textContent = formatCurrency(expenses.length ? summary.total / 2 : 0);
+      el.paidGiovanni.textContent = formatCurrency(summary.totalsPaid.Giovanni);
+      el.paidViviana.textContent = formatCurrency(summary.totalsPaid.Viviana);
+      el.owedGiovanni.textContent = formatCurrency(summary.totalsOwed.Giovanni);
+      el.owedViviana.textContent = formatCurrency(summary.totalsOwed.Viviana);
+      el.reportText.value = buildReport(summary);
+
+      if (!expenses.length) {
+        el.expenseList.innerHTML = '<div class="empty">Nessuna spesa ancora nel viaggio collegato.</div>';
+      } else {
+        el.expenseList.innerHTML = expenses.map(item => `
+          <article class="expense-item">
+            <div>
+              <strong>${escapeHtml(item.description)}</strong>
+              <div class="expense-meta">
+                <span class="tag">${formatCurrency(item.amount)}</span>
+                <span class="tag">${formatExpenseDateTime(item.expenseDateTime)}</span>
+                <span class="tag">Pagato da ${escapeHtml(item.paidBy)}</span>
+                <span class="tag">G ${item.shares.Giovanni}%</span>
+                <span class="tag">V ${item.shares.Viviana}%</span>
+              </div>
+            </div>
+            <button class="icon-btn" aria-label="Elimina spesa" onclick="window.deleteExpense('${item.id}')">✕</button>
+          </article>
+        `).join('');
+      }
+
+      if (Math.abs(summary.balanceGiovanni) < 0.01) {
+        el.settlementBox.className = 'settlement ok';
+        el.settlementBox.textContent = 'Siete in pari.';
+      } else if (summary.balanceGiovanni < 0) {
+        el.settlementBox.className = 'settlement warning';
+        el.settlementBox.textContent = `Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`;
+      } else {
+        el.settlementBox.className = 'settlement info';
+        el.settlementBox.textContent = `Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`;
+      }
+    }
+
+    document.querySelectorAll('[data-split]').forEach(button => button.addEventListener('click', () => {
+      splitMode = button.dataset.split;
+      document.querySelectorAll('[data-split]').forEach(btn => btn.classList.toggle('active', btn === button));
+      el.customSplitFields.style.display = splitMode === 'custom' ? 'grid' : 'none';
+    }));
+
+    el.healthBtn.addEventListener('click', async () => {
+      try {
+        const res = await getAppState();
+        alert(JSON.stringify(res, null, 2));
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    el.connectBtn.addEventListener('click', async () => {
+      try {
+        const tripId = el.tripId.value.trim().toLowerCase();
+        if (!tripId) throw new Error('Inserisci un ID Spese.');
+        await reloadTrip(tripId);
+      } catch (error) {
+        showAlert(el.connectionAlert, `Errore: ${error.message}`, 'error');
+      }
+    });
+
+    el.disconnectBtn.addEventListener('click', () => {
+      currentTripId = '';
+      expenses = [];
+      render();
+      showAlert(el.connectionAlert, `Vista svuotata.`, 'warning');
+    });
+
+    el.form.addEventListener('submit', async event => {
+      event.preventDefault();
+      try {
+        if (!currentTripId) throw new Error('Carica prima un viaggio.');
+        const description = el.description.value.trim();
+        const amount = Number(el.amount.value);
+        const expenseDateTime = el.expenseDateTime.value;
+        if (!description) throw new Error('Inserisci un oggetto o servizio.');
+        if (!expenseDateTime) throw new Error('Inserisci data e ora della spesa.');
+        if (!(amount > 0)) throw new Error('Inserisci un costo valido.');
+
+        const shares = currentShares();
+        const payload = {
+          description,
+          amount: round(amount),
+          expenseDateTime,
+          paidBy: el.paidBy.value,
+          shares,
+          createdBy: el.myName.value
+        };
+
+        const res = await googleRun('addExpense', currentTripId, payload);
+        expenses = res.expenses || [];
+        el.form.reset();
+        el.expenseDateTime.value = defaultDateTimeValue();
+        el.paidBy.value = el.myName.value;
+        splitMode = 'equal';
+        document.querySelectorAll('[data-split]').forEach(btn => btn.classList.toggle('active', btn.dataset.split === 'equal'));
+        el.customSplitFields.style.display = 'none';
+        el.shareGiovanni.value = 50;
+        el.shareViviana.value = 50;
+        render();
+        showAlert(el.formAlert, `Spesa salvata su Google Sheets.`, 'ok');
+      } catch (error) {
+        showAlert(el.formAlert, `Errore: ${error.message}`, 'error');
+      }
+    });
+
+    window.deleteExpense = async function(id) {
+      try {
+        if (!currentTripId) throw new Error('Nessun viaggio caricato.');
+        const res = await googleRun('deleteExpense', currentTripId, id);
+        expenses = res.expenses || [];
+        render();
+        showAlert(el.formAlert, `Spesa eliminata.`, 'ok');
+      } catch (error) {
+        showAlert(el.formAlert, `Errore: ${error.message}`, 'error');
+      }
+    };
+
+    function copyReport() {
+      navigator.clipboard.writeText(el.reportText.value)
+        .then(() => showAlert(el.formAlert, 'Report copiato negli appunti.', 'ok'))
+        .catch(() => showAlert(el.formAlert, 'Copia non disponibile in questo browser.', 'error'));
+    }
+
+    el.copyReport.addEventListener('click', copyReport);
+    el.paidBy.value = el.myName.value;
+    el.expenseDateTime.value = defaultDateTimeValue();
+    document.getElementById('deployVersionLabel').textContent = DEPLOY_VERSION;
+    render();
+
+    if (INITIAL_TRIP_ID) {
+      el.tripId.value = INITIAL_TRIP_ID;
+      reloadTrip(INITIAL_TRIP_ID).catch(err => showAlert(el.connectionAlert, `Errore: ${err.message}`, 'error'));
+    }
+  </script>
 </body>
 </html>
