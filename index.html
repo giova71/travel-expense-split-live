@@ -242,13 +242,34 @@
     let expenses = [];
 
     const el = {
-      tripId: document.getElementById('tripId'), myName: document.getElementById('myName'), connectBtn: document.getElementById('connectBtn'), disconnectBtn: document.getElementById('disconnectBtn'),
-      connectionAlert: document.getElementById('connectionAlert'), form: document.getElementById('expenseForm'), description: document.getElementById('description'), expenseDateTime: document.getElementById('expenseDateTime'), amount: document.getElementById('amount'),
-      paidBy: document.getElementById('paidBy'), shareGiovanni: document.getElementById('shareGiovanni'), shareViviana: document.getElementById('shareViviana'), customSplitFields: document.getElementById('customSplitFields'),
-      totalAmount: document.getElementById('totalAmount'), expenseCount: document.getElementById('expenseCount'), averageShare: document.getElementById('averageShare'), paidGiovanni: document.getElementById('paidGiovanni'),
-      paidViviana: document.getElementById('paidViviana'), owedGiovanni: document.getElementById('owedGiovanni'), owedViviana: document.getElementById('owedViviana'), settlementBox: document.getElementById('settlementBox'),
-      reportText: document.getElementById('reportText'), expenseList: document.getElementById('expenseList'), formAlert: document.getElementById('formAlert'), copyReport: document.getElementById('copyReport'),
-      stickyCopy: document.getElementById('stickyCopy'), stickyFocus: document.getElementById('stickyFocus'), themeToggle: document.querySelector('[data-theme-toggle]')
+      tripId: document.getElementById('tripId'),
+      myName: document.getElementById('myName'),
+      connectBtn: document.getElementById('connectBtn'),
+      disconnectBtn: document.getElementById('disconnectBtn'),
+      connectionAlert: document.getElementById('connectionAlert'),
+      form: document.getElementById('expenseForm'),
+      description: document.getElementById('description'),
+      expenseDateTime: document.getElementById('expenseDateTime'),
+      amount: document.getElementById('amount'),
+      paidBy: document.getElementById('paidBy'),
+      shareGiovanni: document.getElementById('shareGiovanni'),
+      shareViviana: document.getElementById('shareViviana'),
+      customSplitFields: document.getElementById('customSplitFields'),
+      totalAmount: document.getElementById('totalAmount'),
+      expenseCount: document.getElementById('expenseCount'),
+      averageShare: document.getElementById('averageShare'),
+      paidGiovanni: document.getElementById('paidGiovanni'),
+      paidViviana: document.getElementById('paidViviana'),
+      owedGiovanni: document.getElementById('owedGiovanni'),
+      owedViviana: document.getElementById('owedViviana'),
+      settlementBox: document.getElementById('settlementBox'),
+      reportText: document.getElementById('reportText'),
+      expenseList: document.getElementById('expenseList'),
+      formAlert: document.getElementById('formAlert'),
+      copyReport: document.getElementById('copyReport'),
+      stickyCopy: document.getElementById('stickyCopy'),
+      stickyFocus: document.getElementById('stickyFocus'),
+      themeToggle: document.querySelector('[data-theme-toggle]')
     };
 
     const formatCurrency = value => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value || 0);
@@ -292,15 +313,48 @@
       return String(message || '').toLowerCase().includes('access denied') || String(message || '').toLowerCase().includes('accesso negato');
     }
 
-    function api(action, payload = {}) {
-      return fetch(APP_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, ...payload })
-      }).then(async r => {
-        const text = await r.text();
-        try { return JSON.parse(text); } catch { return { ok: false, error: text || 'Invalid response' }; }
+    function buildDebugUrl(action, payload = {}) {
+      const url = new URL(APP_SCRIPT_URL);
+      url.searchParams.set('action', action);
+      url.searchParams.set('debug', '1');
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+        if (typeof value === 'object') {
+          url.searchParams.set(key, JSON.stringify(value));
+        } else {
+          url.searchParams.set(key, String(value));
+        }
       });
+      return url.toString();
+    }
+
+    async function api(action, payload = {}) {
+      const requestUrl = APP_SCRIPT_URL;
+      try {
+        const response = await fetch(requestUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, ...payload })
+        });
+
+        const text = await response.text();
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          parsed = { ok: false, error: text || 'Invalid response' };
+        }
+
+        if (!response.ok || parsed.ok === false) {
+          const debugUrl = buildDebugUrl(action, { ...payload, responseStatus: response.status });
+          throw new Error(`${parsed.error || response.statusText || 'Request failed'} | debugUrl: ${debugUrl}`);
+        }
+
+        return parsed;
+      } catch (error) {
+        const debugUrl = buildDebugUrl(action, payload);
+        throw new Error(`${error.message} | debugUrl: ${debugUrl}`);
+      }
     }
 
     function currentShares() {
@@ -315,13 +369,20 @@
       const totalsPaid = { Giovanni: 0, Viviana: 0 };
       const totalsOwed = { Giovanni: 0, Viviana: 0 };
       let total = 0;
+
       expenses.forEach(item => {
         total += Number(item.amount || 0);
         totalsPaid[item.paidBy] += Number(item.amount || 0);
         totalsOwed.Giovanni += item.amount * (item.shares.Giovanni / 100);
         totalsOwed.Viviana += item.amount * (item.shares.Viviana / 100);
       });
-      return { total: round(total), totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Viviana: round(totalsPaid.Viviana) }, totalsOwed: { Giovanni: round(totalsOwed.Giovanni), Viviana: round(totalsOwed.Viviana) }, balanceGiovanni: round(totalsPaid.Giovanni - totalsOwed.Giovanni) };
+
+      return {
+        total: round(total),
+        totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Viviana: round(totalsPaid.Viviana) },
+        totalsOwed: { Giovanni: round(totalsOwed.Giovanni), Viviana: round(totalsOwed.Viviana) },
+        balanceGiovanni: round(totalsPaid.Giovanni - totalsOwed.Giovanni)
+      };
     }
 
     function buildReport(summary) {
@@ -336,11 +397,16 @@
         `Quota dovuta Viviana: ${formatCurrency(summary.totalsOwed.Viviana)}`,
         ''
       ];
+
       if (Math.abs(summary.balanceGiovanni) < 0.01) lines.push('Saldo finale: siete in pari.');
       else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale: Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`);
       else lines.push(`Saldo finale: Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`);
+
       lines.push('', 'Dettaglio spese:');
-      expenses.slice().reverse().forEach((item, index) => lines.push(`${index + 1}. ${item.description} — ${formatCurrency(item.amount)} — ${formatExpenseDateTime(item.expenseDateTime)} — pagato da ${item.paidBy} — quota G ${item.shares.Giovanni}% / V ${item.shares.Viviana}%`));
+      expenses.slice().reverse().forEach((item, index) => {
+        lines.push(`${index + 1}. ${item.description} — ${formatCurrency(item.amount)} — ${formatExpenseDateTime(item.expenseDateTime)} — pagato da ${item.paidBy} — quota G ${item.shares.Giovanni}% / V ${item.shares.Viviana}%`);
+      });
+
       return lines.join('\n');
     }
 
@@ -354,11 +420,37 @@
       el.owedGiovanni.textContent = formatCurrency(summary.totalsOwed.Giovanni);
       el.owedViviana.textContent = formatCurrency(summary.totalsOwed.Viviana);
       el.reportText.value = buildReport(summary);
-      if (!expenses.length) el.expenseList.innerHTML = '<div class="empty">Nessuna spesa ancora nel viaggio collegato.</div>';
-      else el.expenseList.innerHTML = expenses.map(item => `<article class="expense-item"><div><strong>${escapeHtml(item.description)}</strong><div class="expense-meta"><span class="tag">${formatCurrency(item.amount)}</span><span class="tag">${formatExpenseDateTime(item.expenseDateTime)}</span><span class="tag">Pagato da ${escapeHtml(item.paidBy)}</span><span class="tag">G ${item.shares.Giovanni}%</span><span class="tag">V ${item.shares.Viviana}%</span></div></div><button class="icon-btn" aria-label="Elimina spesa" onclick="window.deleteExpense('${item.id}')">✕</button></article>`).join('');
-      if (Math.abs(summary.balanceGiovanni) < 0.01) { el.settlementBox.className = 'settlement ok'; el.settlementBox.textContent = 'Siete in pari.'; }
-      else if (summary.balanceGiovanni < 0) { el.settlementBox.className = 'settlement warning'; el.settlementBox.textContent = `Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`; }
-      else { el.settlementBox.className = 'settlement info'; el.settlementBox.textContent = `Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`; }
+
+      if (!expenses.length) {
+        el.expenseList.innerHTML = '<div class="empty">Nessuna spesa ancora nel viaggio collegato.</div>';
+      } else {
+        el.expenseList.innerHTML = expenses.map(item => `
+          <article class="expense-item">
+            <div>
+              <strong>${escapeHtml(item.description)}</strong>
+              <div class="expense-meta">
+                <span class="tag">${formatCurrency(item.amount)}</span>
+                <span class="tag">${formatExpenseDateTime(item.expenseDateTime)}</span>
+                <span class="tag">Pagato da ${escapeHtml(item.paidBy)}</span>
+                <span class="tag">G ${item.shares.Giovanni}%</span>
+                <span class="tag">V ${item.shares.Viviana}%</span>
+              </div>
+            </div>
+            <button class="icon-btn" aria-label="Elimina spesa" onclick="window.deleteExpense('${item.id}')">✕</button>
+          </article>
+        `).join('');
+      }
+
+      if (Math.abs(summary.balanceGiovanni) < 0.01) {
+        el.settlementBox.className = 'settlement ok';
+        el.settlementBox.textContent = 'Siete in pari.';
+      } else if (summary.balanceGiovanni < 0) {
+        el.settlementBox.className = 'settlement warning';
+        el.settlementBox.textContent = `Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`;
+      } else {
+        el.settlementBox.className = 'settlement info';
+        el.settlementBox.textContent = `Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`;
+      }
     }
 
     document.querySelectorAll('[data-split]').forEach(button => button.addEventListener('click', () => {
@@ -371,14 +463,14 @@
       try {
         const tripId = el.tripId.value.trim().toLowerCase();
         if (!tripId) throw new Error('Inserisci un ID viaggio.');
+
         const res = await api('list', { tripId });
-        if (!res.ok) throw new Error(res.error || 'Errore caricamento.');
         currentTripId = tripId;
         expenses = res.expenses || [];
         render();
         showAlert(el.connectionAlert, `Caricato viaggio condiviso: ${tripId}`, 'ok');
       } catch (error) {
-        showAlert(el.connectionAlert, `Errore: ${isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message} | URL: ${APP_SCRIPT_URL}`, 'error');
+        showAlert(el.connectionAlert, `Errore: ${error.message}`, 'error');
       }
     });
 
@@ -399,9 +491,20 @@
         if (!description) throw new Error('Inserisci un oggetto o servizio.');
         if (!expenseDateTime) throw new Error('Inserisci data e ora della spesa.');
         if (!(amount > 0)) throw new Error('Inserisci un costo valido.');
-        const payload = { tripId: currentTripId, expense: { description, amount: round(amount), expenseDateTime, paidBy: el.paidBy.value, shares: currentShares(), createdBy: el.myName.value } };
+
+        const payload = {
+          tripId: currentTripId,
+          expense: {
+            description,
+            amount: round(amount),
+            expenseDateTime,
+            paidBy: el.paidBy.value,
+            shares: currentShares(),
+            createdBy: el.myName.value
+          }
+        };
+
         const res = await api('add', payload);
-        if (!res.ok) throw new Error(res.error || 'Errore salvataggio.');
         expenses = res.expenses || [];
         el.form.reset();
         el.expenseDateTime.value = defaultDateTimeValue();
@@ -412,9 +515,9 @@
         el.shareGiovanni.value = 50;
         el.shareViviana.value = 50;
         render();
-        showAlert(el.formAlert, `Spesa salvata su Google Sheets. | URL: ${APP_SCRIPT_URL}`, 'ok');
+        showAlert(el.formAlert, `Spesa salvata su Google Sheets.`, 'ok');
       } catch (error) {
-        showAlert(el.formAlert, `Errore: ${isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message} | URL: ${APP_SCRIPT_URL}`, 'error');
+        showAlert(el.formAlert, `Errore: ${error.message}`, 'error');
       }
     });
 
@@ -422,12 +525,11 @@
       try {
         if (!currentTripId) throw new Error('Nessun viaggio caricato.');
         const res = await api('delete', { tripId: currentTripId, id });
-        if (!res.ok) throw new Error(res.error || 'Errore eliminazione.');
         expenses = res.expenses || [];
         render();
-        showAlert(el.formAlert, `Spesa eliminata. | URL: ${APP_SCRIPT_URL}`, 'ok');
+        showAlert(el.formAlert, `Spesa eliminata.`, 'ok');
       } catch (error) {
-        showAlert(el.formAlert, `Errore: ${isAccessDeniedError(error.message) ? 'Accesso negato: usa uno degli account autorizzati Google.' : error.message} | URL: ${APP_SCRIPT_URL}`, 'error');
+        showAlert(el.formAlert, `Errore: ${error.message}`, 'error');
       }
     };
 
