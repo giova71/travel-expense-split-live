@@ -329,31 +329,22 @@
     }
 
     async function api(action, payload = {}) {
-      const requestUrl = APP_SCRIPT_URL;
+      const debugUrl = buildDebugUrl(action, payload);
       try {
-        const response = await fetch(requestUrl, {
+        const response = await fetch(APP_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action, ...payload })
         });
-
         const text = await response.text();
         let parsed;
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-          parsed = { ok: false, error: text || 'Invalid response' };
-        }
-
+        try { parsed = JSON.parse(text); } catch { parsed = { ok: false, error: text || 'Invalid response' }; }
         if (!response.ok || parsed.ok === false) {
-          const debugUrl = buildDebugUrl(action, { ...payload, responseStatus: response.status });
-          throw new Error(`${parsed.error || response.statusText || 'Request failed'} | debugUrl: ${debugUrl}`);
+          throw new Error(`${parsed.error || response.statusText || 'Request failed'} | URL: ${debugUrl}`);
         }
-
         return parsed;
       } catch (error) {
-        const debugUrl = buildDebugUrl(action, payload);
-        throw new Error(`${error.message} | debugUrl: ${debugUrl}`);
+        throw new Error(`${error.message} | URL: ${debugUrl}`);
       }
     }
 
@@ -369,14 +360,12 @@
       const totalsPaid = { Giovanni: 0, Viviana: 0 };
       const totalsOwed = { Giovanni: 0, Viviana: 0 };
       let total = 0;
-
       expenses.forEach(item => {
         total += Number(item.amount || 0);
         totalsPaid[item.paidBy] += Number(item.amount || 0);
         totalsOwed.Giovanni += item.amount * (item.shares.Giovanni / 100);
         totalsOwed.Viviana += item.amount * (item.shares.Viviana / 100);
       });
-
       return {
         total: round(total),
         totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Viviana: round(totalsPaid.Viviana) },
@@ -397,16 +386,13 @@
         `Quota dovuta Viviana: ${formatCurrency(summary.totalsOwed.Viviana)}`,
         ''
       ];
-
       if (Math.abs(summary.balanceGiovanni) < 0.01) lines.push('Saldo finale: siete in pari.');
       else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale: Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`);
       else lines.push(`Saldo finale: Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`);
-
       lines.push('', 'Dettaglio spese:');
       expenses.slice().reverse().forEach((item, index) => {
         lines.push(`${index + 1}. ${item.description} — ${formatCurrency(item.amount)} — ${formatExpenseDateTime(item.expenseDateTime)} — pagato da ${item.paidBy} — quota G ${item.shares.Giovanni}% / V ${item.shares.Viviana}%`);
       });
-
       return lines.join('\n');
     }
 
@@ -420,37 +406,11 @@
       el.owedGiovanni.textContent = formatCurrency(summary.totalsOwed.Giovanni);
       el.owedViviana.textContent = formatCurrency(summary.totalsOwed.Viviana);
       el.reportText.value = buildReport(summary);
-
-      if (!expenses.length) {
-        el.expenseList.innerHTML = '<div class="empty">Nessuna spesa ancora nel viaggio collegato.</div>';
-      } else {
-        el.expenseList.innerHTML = expenses.map(item => `
-          <article class="expense-item">
-            <div>
-              <strong>${escapeHtml(item.description)}</strong>
-              <div class="expense-meta">
-                <span class="tag">${formatCurrency(item.amount)}</span>
-                <span class="tag">${formatExpenseDateTime(item.expenseDateTime)}</span>
-                <span class="tag">Pagato da ${escapeHtml(item.paidBy)}</span>
-                <span class="tag">G ${item.shares.Giovanni}%</span>
-                <span class="tag">V ${item.shares.Viviana}%</span>
-              </div>
-            </div>
-            <button class="icon-btn" aria-label="Elimina spesa" onclick="window.deleteExpense('${item.id}')">✕</button>
-          </article>
-        `).join('');
-      }
-
-      if (Math.abs(summary.balanceGiovanni) < 0.01) {
-        el.settlementBox.className = 'settlement ok';
-        el.settlementBox.textContent = 'Siete in pari.';
-      } else if (summary.balanceGiovanni < 0) {
-        el.settlementBox.className = 'settlement warning';
-        el.settlementBox.textContent = `Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`;
-      } else {
-        el.settlementBox.className = 'settlement info';
-        el.settlementBox.textContent = `Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`;
-      }
+      if (!expenses.length) el.expenseList.innerHTML = '<div class="empty">Nessuna spesa ancora nel viaggio collegato.</div>';
+      else el.expenseList.innerHTML = expenses.map(item => `<article class="expense-item"><div><strong>${escapeHtml(item.description)}</strong><div class="expense-meta"><span class="tag">${formatCurrency(item.amount)}</span><span class="tag">${formatExpenseDateTime(item.expenseDateTime)}</span><span class="tag">Pagato da ${escapeHtml(item.paidBy)}</span><span class="tag">G ${item.shares.Giovanni}%</span><span class="tag">V ${item.shares.Viviana}%</span></div></div><button class="icon-btn" aria-label="Elimina spesa" onclick="window.deleteExpense('${item.id}')">✕</button></article>`).join('');
+      if (Math.abs(summary.balanceGiovanni) < 0.01) { el.settlementBox.className = 'settlement ok'; el.settlementBox.textContent = 'Siete in pari.'; }
+      else if (summary.balanceGiovanni < 0) { el.settlementBox.className = 'settlement warning'; el.settlementBox.textContent = `Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`; }
+      else { el.settlementBox.className = 'settlement info'; el.settlementBox.textContent = `Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`; }
     }
 
     document.querySelectorAll('[data-split]').forEach(button => button.addEventListener('click', () => {
@@ -463,7 +423,6 @@
       try {
         const tripId = el.tripId.value.trim().toLowerCase();
         if (!tripId) throw new Error('Inserisci un ID viaggio.');
-
         const res = await api('list', { tripId });
         currentTripId = tripId;
         expenses = res.expenses || [];
@@ -491,19 +450,7 @@
         if (!description) throw new Error('Inserisci un oggetto o servizio.');
         if (!expenseDateTime) throw new Error('Inserisci data e ora della spesa.');
         if (!(amount > 0)) throw new Error('Inserisci un costo valido.');
-
-        const payload = {
-          tripId: currentTripId,
-          expense: {
-            description,
-            amount: round(amount),
-            expenseDateTime,
-            paidBy: el.paidBy.value,
-            shares: currentShares(),
-            createdBy: el.myName.value
-          }
-        };
-
+        const payload = { tripId: currentTripId, expense: { description, amount: round(amount), expenseDateTime, paidBy: el.paidBy.value, shares: currentShares(), createdBy: el.myName.value } };
         const res = await api('add', payload);
         expenses = res.expenses || [];
         el.form.reset();
