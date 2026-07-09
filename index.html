@@ -88,6 +88,7 @@
         <div>
           <h1>Track Spese live</h1>
           <p class="muted">Spese condivise con Google Sheets e Apps Script.</p>
+          <p class="muted">Deploy corrente: <span id="deployVersionLabel"></span></p>
         </div>
       </div>
       <div class="toolbar">
@@ -104,7 +105,7 @@
             <h2 class="section-title">Connessione</h2>
             <div class="field-grid">
               <div class="field">
-                <label for="tripId">ID viaggio</label>
+                <label for="tripId">ID Spese</label>
                 <input id="tripId" type="text" placeholder="es. sardegna-2026" />
               </div>
               <div class="field">
@@ -119,7 +120,7 @@
               <button id="connectBtn" class="btn btn-primary" type="button">Carica Spese</button>
               <button id="disconnectBtn" class="btn btn-secondary" type="button">Svuota vista</button>
             </div>
-            <div id="connectionAlert" class="alert show warning">Inserisci un ID viaggio e premi Carica Spese.</div>
+            <div id="connectionAlert" class="alert show warning">Inserisci un ID Spese e premi Carica Spese.</div>
           </div>
         </article>
 
@@ -237,6 +238,9 @@
 
   <script>
     const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyehMdAIS_3MHIXqCMr9MxmSS8unuawN4WR_7D9_rhy0h29EPVmGLfVSLnKdB6nklkFIA/exec';
+    const DEPLOY_VERSION = 'v1.0.0';
+    document.getElementById('deployVersionLabel').textContent = DEPLOY_VERSION;
+
     let currentTripId = '';
     let splitMode = 'equal';
     let expenses = [];
@@ -326,6 +330,7 @@
 
     async function api(action, payload = {}) {
       const url = buildDebugUrl(action, payload);
+      console.log('FETCH URL:', url);
       const response = await fetch(url, { method: 'GET', redirect: 'follow' });
       const text = await response.text();
       let parsed;
@@ -352,12 +357,7 @@
         totalsOwed.Giovanni += item.amount * (item.shares.Giovanni / 100);
         totalsOwed.Viviana += item.amount * (item.shares.Viviana / 100);
       });
-      return {
-        total: round(total),
-        totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Viviana: round(totalsPaid.Viviana) },
-        totalsOwed: { Giovanni: round(totalsOwed.Giovanni), Viviana: round(totalsOwed.Viviana) },
-        balanceGiovanni: round(totalsPaid.Giovanni - totalsOwed.Giovanni)
-      };
+      return { total: round(total), totalsPaid: { Giovanni: round(totalsPaid.Giovanni), Viviana: round(totalsPaid.Viviana) }, totalsOwed: { Giovanni: round(totalsOwed.Giovanni), Viviana: round(totalsOwed.Viviana) }, balanceGiovanni: round(totalsPaid.Giovanni - totalsOwed.Giovanni) };
     }
 
     function buildReport(summary) {
@@ -408,7 +408,7 @@
     el.connectBtn.addEventListener('click', async () => {
       try {
         const tripId = el.tripId.value.trim().toLowerCase();
-        if (!tripId) throw new Error('Inserisci un ID viaggio.');
+        if (!tripId) throw new Error('Inserisci un ID Spese.');
         const res = await api('list', { tripId });
         currentTripId = tripId;
         expenses = res.expenses || [];
@@ -437,14 +437,15 @@
         if (!expenseDateTime) throw new Error('Inserisci data e ora della spesa.');
         if (!(amount > 0)) throw new Error('Inserisci un costo valido.');
 
+        const shares = currentShares();
         const payload = {
           tripId: currentTripId,
           description,
           amount: round(amount),
           expenseDateTime,
           paidBy: el.paidBy.value,
-          shareGiovanni: currentShares().Giovanni,
-          shareViviana: currentShares().Viviana,
+          shareGiovanni: shares.Giovanni,
+          shareViviana: shares.Viviana,
           createdBy: el.myName.value
         };
 
