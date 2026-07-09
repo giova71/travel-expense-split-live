@@ -118,6 +118,7 @@
             </div>
             <div class="actions">
               <button id="connectBtn" class="btn btn-primary" type="button">Carica Spese</button>
+              <button id="healthBtn" class="btn btn-secondary" type="button">Health check</button>
               <button id="disconnectBtn" class="btn btn-secondary" type="button">Svuota vista</button>
             </div>
             <div id="connectionAlert" class="alert show warning">Inserisci un ID Spese e premi Carica Spese.</div>
@@ -249,6 +250,7 @@
       tripId: document.getElementById('tripId'),
       myName: document.getElementById('myName'),
       connectBtn: document.getElementById('connectBtn'),
+      healthBtn: document.getElementById('healthBtn'),
       disconnectBtn: document.getElementById('disconnectBtn'),
       connectionAlert: document.getElementById('connectionAlert'),
       form: document.getElementById('expenseForm'),
@@ -312,10 +314,6 @@
         setThemeIcon(next);
       });
     })();
-
-    function isAccessDeniedError(message) {
-      return String(message || '').toLowerCase().includes('access denied') || String(message || '').toLowerCase().includes('accesso negato');
-    }
 
     function buildDebugUrl(action, payload = {}) {
       const url = new URL(APP_SCRIPT_URL);
@@ -404,6 +402,13 @@
       document.querySelectorAll('[data-split]').forEach(btn => btn.classList.toggle('active', btn === button));
       el.customSplitFields.style.display = splitMode === 'custom' ? 'grid' : 'none';
     }));
+
+    el.healthBtn.addEventListener('click', () => {
+      const url = new URL(APP_SCRIPT_URL);
+      url.searchParams.set('action', 'health');
+      url.searchParams.set('debug', '1');
+      window.open(url.toString(), '_blank', 'noopener,noreferrer');
+    });
 
     el.connectBtn.addEventListener('click', async () => {
       try {
