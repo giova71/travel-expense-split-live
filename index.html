@@ -363,7 +363,7 @@
         ''
       ];
       if (Math.abs(summary.balanceGiovanni) < 0.01) lines.push('Saldo finale: siete in pari.');
-      else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale: Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`);
+      else if (summary.balanceGiovanni < 0) lines.push(`Saldo finale : Giovanni deve dare ${formatCurrency(Math.abs(summary.balanceGiovanni))} a Viviana.`);
       else lines.push(`Saldo finale: Viviana deve dare ${formatCurrency(summary.balanceGiovanni)} a Giovanni.`);
       return lines.join('\n');
     }
